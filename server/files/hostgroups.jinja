@@ -1,0 +1,18 @@
+# This file managed by Salt, do not edit by hand!!
+#  Based on salt version 0.17.4 default config
+
+{% if accumulator|default(False) -%}
+{%   if accumulator['hostgroups'] is defined -%}
+{%     for hostgroup in accumulator['hostgroups'] -%}
+{%       if salt['cmd.run']('grep %s /etc/nagios3/servers.cfg' % hostgroup) -%}
+define hostgroup {
+    hostgroup_name  {{ hostgroup }}
+{%-        for item_name, item_value in salt['pillar.get']('nagios:server:hostgroups:%s' % hostgroup).items() %}
+    {{ item_name }}  {{ item_value }}
+{%         endfor -%}
+}
+
+{%       endif -%}
+{%     endfor -%}
+{%   endif -%}
+{% endif -%}

@@ -1,0 +1,35 @@
+# This file managed by Salt, do not edit by hand!!
+#  Based on salt version 0.17.4 default config
+
+{% if accumulator|default(False) -%}
+{%   if accumulator['servers'] is defined -%}
+{%     for node in accumulator['servers'] -%}
+
+{%       set node_pkgs = salt['mine.get'](node, 'pkg.list_pkgs')[node] -%}
+{%       set node_grains = salt['mine.get'](node, 'grains.items' )[node] -%}
+
+define host{
+        use                     generic-host
+        host_name               {{ node }}
+        alias                   {{ node }}
+        address                 {{ node_grains['ip_interfaces']['eth0'][0] }}
+        notes_url		http://dokuwiki.psi.com/servers/{{ node_grains['fqdn'].split('.')[0] }}
+        hostgroups              {% for joined_grain, hostgroup in salt['pillar.get']('nagios:server:hostgroup-relationships:grains').items() -%}
+{%-        set name = joined_grain.split(':')[0] -%}
+{%-        set value = joined_grain.split(':')[1] -%}
+{%-        if node_grains[name] is defined and node_grains[name] == value -%}
+{{ hostgroup + ',' }}
+{%-        endif %}
+{%-      endfor %}
+
+
+{%-      for pkg, hostgroup in salt['pillar.get']('nagios:server:hostgroup-relationships:pkg').items() -%}
+{%-        if pkg in node_pkgs|default([]) -%}
+{{ hostgroup + ',' }}
+{%-        endif %}
+{%-      endfor %}
+        }
+
+{%     endfor -%}
+{%   endif -%}
+{% endif -%}

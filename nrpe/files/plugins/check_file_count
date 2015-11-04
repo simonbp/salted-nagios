@@ -1,0 +1,35 @@
+#!/bin/bash
+
+WATCH_PATH=${1}
+WARN_LEVEL=${2:-15}
+CRITICAL_LEVEL=${3:-25}
+
+OK_STATE=0
+WARNING_STATE=1
+CRITICAL_STATE=2
+
+file_count=0
+file_list=`ls -1 $WATCH_PATH`
+file_return=$?
+file_count=`ls -1 $WATCH_PATH | wc -l`
+
+if [ $file_return -ne 0 ]
+then
+echo "CRITICAL: Error getting file count."
+exit $CRITICAL_STATE
+fi
+
+if [ $file_count -ge $CRITICAL_LEVEL ]
+then
+echo "CRITICAL:" $file_count "files"
+exit $CRITICAL_STATE
+fi
+
+if [ $file_count -ge $WARN_LEVEL ]
+then
+echo "WARNING:" $file_count "files"
+exit $WARNING_STATE
+fi
+ 
+echo "OK:" $file_count "files"
+exit $OK_STATE

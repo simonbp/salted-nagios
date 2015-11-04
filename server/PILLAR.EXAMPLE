@@ -1,0 +1,281 @@
+nagios:
+  server:
+    cfg_file:
+      - /etc/nagios3/commands.cfg
+      - /etc/nagios3/hostgroups.cfg
+      - /etc/nagios3/servers.cfg
+    cfg_dir:
+      - /etc/nagios-plugins/config
+      - /etc/nagios3/conf.d
+    check_external_commands: 1
+    enable_flap_detection: 1
+    illegal_object_name_chars: "`~!$%^&*|'\"<>?,()="
+    illegal_macro_output_chars: "`~$&|'\"<>"
+    admin_email: root@localhost
+    admin_pager: pageroot@localhost
+
+    timeperiods:
+      24x7:
+        alias: 24 Hours A Day, 7 Days A Week
+        sunday: 00:00-24:00
+        monday: 00:00-24:00
+        tuesday: 00:00-24:00
+        wednesday: 00:00-24:00
+        thursday: 00:00-24:00
+        friday: 00:00-24:00
+        saturday: 00:00-24:00
+      workhours:
+        alias: Standard Work Hours
+        monday: 09:00-17:00
+        tuesday: 09:00-17:00
+        wednesday: 09:00-17:00
+        thursday: 09:00-17:00
+        friday: 09:00-17:00
+      nonworkhours:
+        alias: Non-Work Hours
+        sunday: 00:00-24:00
+        monday: 00:00-09:00,17:00-24:00
+        tuesday: 00:00-09:00,17:00-24:00
+        wednesday: 00:00-09:00,17:00-24:00
+        thursday: 00:00-09:00,17:00-24:00
+        friday: 00:00-09:00,17:00-24:00
+        saturday: 00:00-24:00
+      never:
+        alias: Never
+
+    contacts:
+      pagerduty:
+        alias: PagerDuty Pseudo-Contact
+        service_notification_period: 24x7
+        host_notification_period: 24x7
+        service_notification_options: w,u,c,r
+        host_notification_options: d,r
+        service_notification_commands: notify-service-by-pagerduty
+        host_notification_commands: notify-host-by-pagerduty
+        pager: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+    contactgroups:
+      ~
+
+    hosts:
+      generic-host:
+        name: generic-host
+        notifications_enabled: 1
+        event_handler_enabled: 1
+        flap_detection_enabled: 1
+        process_perf_data: 1
+        retain_status_information: 1
+        retain_nonstatus_information: 1
+        check_command: check-host-alive
+        max_check_attempts: 10
+        notification_interval: 0
+        notification_period: 24x7
+        notification_options: d,u,r
+        contacts: pagerduty
+        register: 0
+
+    hostgroups:
+      all:
+        alias: All Servers
+        members: '*'
+      debian-servers:
+        alias: Debian Servers
+      ubuntu-servers:
+        alias: Ubuntu Servers
+      http-servers:
+        alias: HTTP Servers
+      redis-servers:
+        alias: Redis Servers
+      rabbitmq-servers:
+        alias: RabbitMQ Servers
+      salt-masters:
+        alias: Salt Masters
+      salt-minions:
+        alias: Salt Minions
+      sentinel-servers:
+        alias: Sentinel Servers
+      ssh-servers:
+        alias: SSH Servers
+      tftp-servers:
+        alias: TFTP Servers
+      ossec-servers:
+        alias: OSSEC Servers
+      nfs-servers:
+        alias: NFS Servers
+      apt-servers:
+        alias: APT Servers
+      nullmailer-servers:
+        alias: Nullmailer Servers
+
+    hostgroup-relationships:
+      pkg:
+        apache2: http-servers
+        aptly: apt-servers
+        rabbitmq-server: rabbitmq-servers
+        redis-server: redis-servers
+        salt-master: salt-masters
+        salt-minion: salt-minions
+        ssh-server: ssh-servers
+        tftpd-hpa: tftp-servers
+        ossec-hids: ossec-servers
+        nfs-kernel-server: nfs-servers
+        nullmailer: nullmailer-servers
+      grains:
+        'os:Ubuntu': ubuntu-servers
+        'os:Debian': debian-servers
+        'role:redis': sentinel-servers
+
+    commands:
+      notify-service-by-pagerduty: /usr/local/bin/pagerduty_nagios.pl enqueue -f pd_nagios_object=service
+      notify-host-by-pagerduty: /usr/local/bin/pagerduty_nagios.pl enqueue -f pd_nagios_object=host
+
+    services:
+      generic-service:
+        name: generic-service
+        active_checks_enabled: 1
+        passive_checks_enabled: 1
+        parallelize_check: 1
+        obsess_over_service: 1
+        check_freshness: 0
+        notifications_enabled: 1
+        event_handler_enabled: 1
+        flap_detection_enabled: 1
+        process_perf_data: 1
+        retain_status_information: 1
+        retain_nonstatus_information: 1
+        notification_interval: 0
+        is_volatile: 0
+        check_period: 24x7
+        normal_check_interval: 5
+        retry_check_interval: 1
+        max_check_attempts: 4
+        notification_period: 24x7
+        notification_options: w,u,c,r
+        contacts: pagerduty
+        register: 0
+      HTTP:
+        hostgroup_name: http-servers
+        check_command: check_http
+        use: generic-service
+      SSH:
+        hostgroup_name: ssh-servers
+        check_command: check_ssh
+        use: generic-service
+        notification_interval: 0
+      Salt Master Process:
+        hostgroup_name: salt-masters
+        check_command: 'check_nrpe_1arg!check_salt_master'
+        use: generic-service
+        notification_interval: 0
+      Salt Minion Process:
+        hostgroup_name: salt-minions
+        check_command: 'check_nrpe_1arg!check_salt_minion'
+        use: generic-service
+        notification_interval: 0
+      TFTP Process:
+        hostgroup_name: tftp-servers
+        check_command: 'check_nrpe_1arg!check_tftp_process'
+        use: generic-service
+        notification_interval: 0
+      TFTP Test:
+        hostgroup_name: tftp-servers
+        check_command: 'check_nrpe_1arg!check_tftp'
+        use: generic-service
+        notification_interval: 0
+      APT Server:
+        hostgroup_name: apt-servers
+        check_command: 'check_nrpe_1arg!check_apt-server'
+        use: generic-service
+        notification_interval: 0
+      Disk Space:
+        hostgroup_name: ubuntu-servers
+        use: generic-service
+        check_command: 'check_nrpe_1arg!check_disk'
+      Current Users:
+        hostgroup_name: ubuntu-servers
+        use: generic-service
+        check_command: 'check_nrpe_1arg!check_users'
+      Total Processes:
+        hostgroup_name: ubuntu-servers
+        use: generic-service
+        check_command: 'check_nrpe_1arg!check_procs'
+      Current Load:
+        hostgroup_name: ubuntu-servers
+        use: generic-service
+        check_command: 'check_nrpe_1arg!check_load'
+      RabbitMQ:
+        hostgroup_name: rabbitmq-servers
+        check_command: 'check_nrpe_1arg!check_rabbitmq-server'
+        use: generic-service
+        notification_interval: 
+      Redis:
+        hostgroup_name: redis-servers
+        check_command: 'check_nrpe_1arg!check_redis'
+        use: generic-service
+        notification_interval: 0
+      Sentinel:
+        hostgroup_name: sentinel-servers
+        check_command: 'check_nrpe_1arg!check_sentinel'
+        use: generic-service
+        notification_interval: 0
+      OSSEC Mail:
+        hostgroup_name: ossec-servers
+        check_command: 'check_nrpe_1arg!check_ossec-maild'
+        use: generic-service
+        notification_interval: 0
+      OSSEC Exec:
+        hostgroup_name: ossec-servers
+        check_command: 'check_nrpe_1arg!check_ossec-execd'
+        use: generic-service
+        notification_interval: 0
+      OSSEC Analysis:
+        hostgroup_name: ossec-servers
+        check_command: 'check_nrpe_1arg!check_ossec-analysisd'
+        use: generic-service
+        notification_interval: 0
+      OSSEC Log Collector:
+        hostgroup_name: ossec-servers
+        check_command: 'check_nrpe_1arg!check_ossec-logcollector'
+        use: generic-service
+        notification_interval: 0
+      OSSEC Syscheck:
+        hostgroup_name: ossec-servers
+        check_command: 'check_nrpe_1arg!check_ossec-syscheckd'
+        use: generic-service
+        notification_interval: 0
+      OSSEC Monitor:
+        hostgroup_name: ossec-servers
+        check_command: 'check_nrpe_1arg!check_ossec-monitord'
+        use: generic-service
+        notification_interval: 0
+      OSSEC Auth:
+        hostgroup_name: ossec-servers
+        check_command: 'check_nrpe_1arg!check_ossec-authd'
+        use: generic-service
+        notification_interval: 0
+      OSSEC Client Syslog:
+        hostgroup_name: ossec-servers
+        check_command: 'check_nrpe_1arg!check_ossec-csyslogd'
+        use: generic-service
+        notification_interval: 0
+      NFS Server:
+        hostgroup_name: nfs-servers
+        check_command: 'check_nrpe_1arg!check_nfsd'
+        use: generic-service
+        notification_interval: 0
+      NFS v4 Server:
+        hostgroup_name: nfs-servers
+        check_command: 'check_nrpe_1arg!check_nfsd4'
+        use: generic-service
+        notification_interval: 0
+      Nullmailer:
+        hostgroup_name: nullmailer-servers
+        check_command: 'check_nrpe_1arg!check_nullmailer'
+        use: generic-service
+        notification_interval: 0
+      Mail Queue:
+        hostgroup_name: nullmailer-servers
+        check_command: 'check_nrpe_1arg!check_nullmailer-queue'
+        use: generic-service
+        notification_interval: 0
+
